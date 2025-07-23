@@ -43,6 +43,3 @@ def _list_filtering(df):
     lunghezze = df['TTT'].apply(len)
     max_len = lunghezze.max()
     return df[lunghezze == max_len]
-
-
-load_data("veichle_speed/data/METRO966_averageSpeed_desc.csv")
