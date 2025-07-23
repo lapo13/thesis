@@ -1,26 +1,25 @@
-import data_handler as dh
-from NeuralNet import RegressionNet as net
+import veichle_speed.app.custom.utils.data_handler as dh
+import os 
+
+from veichle_speed.app.custom.models.NeuralNet import RegressionNet as net
+from veichle_speed.app.custom.utils.parser import parse_arguments as parse
 
 import torch
-from torch.utils.data import DataLoader as Dataloader
+from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
 
 import nvflare.client as fl
+from nvflare.client.tracking import SummaryWriter
 
 
-#model traing parameters and device set
-DEVICE = "mps" if torch.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
-batch_size = 4
-learning_rate = 1e-3
-epochs = 5 
 
-def train_loop(dataloader, model, optimizer, loss_fn, summary_writer = None):
+def train_loop(dataloader, model, optimizer, loss_fn, device, batch_size, summary_writer = None):
       size = len(dataloader.dataset)
       #setting training mode for model
       model.train()
 
       for batch, data in enumerate(dataloader):
-            X, y = data[0].to(DEVICE), data[1].to(DEVICE)
+            X, y = data[0].to(device), data[1].to(device)
             pred = model(X)
             loss = loss_fn(pred, y)
 
@@ -60,8 +59,14 @@ def client():
      Returns:
      None
      """
-     file_path = "veichle_speed/app/data/METRO966_averageSpeed_desc.csv"
-     result = dh.load_data(file_path)
+     
+     args = parse()
+
+     print(f"[DEBUG] Current working dir: {os.getcwd()}")
+     print(f"[DEBUG] Data file path received: {args.data_file}")
+     print(f"[DEBUG] File exists? {os.path.exists(args.data_file)}")
+
+     result = dh.load_data(args.data_file)
      
      if result is None:
            print("Failed to load data.")
@@ -85,11 +90,12 @@ def client():
      model = net(input_size, output_size)
 
      #flare initialize
-     fl.init(config_file="veichle_speed/app/config/client.json")
+     fl.init()
      #data loading 
      train_dataset = TensorDataset(X_tensor, y_tensor)
-     train_dataloader = Dataloader(train_dataset, batch_size, shuffle=True)
+     train_dataloader = DataLoader(train_dataset, args.batch_size, shuffle=True)
      
+     #summary = SummaryWriter()
      while fl.is_running():
            recived_model = fl.receive()
 
@@ -102,13 +108,13 @@ def client():
 
            #setting up the local model based on recived model, function loss and optimization criteria 
            model.load_state_dict(recived_model.params)
-           model.to(DEVICE)
+           model.to(args.device)
            loss_fn = torch.nn.MSELoss()
-           optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+           optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-           steps = epochs * len(train_dataloader)
-           for epoch in range(epochs):
-                 train_loop(train_dataloader, model, optimizer, loss_fn)
+           steps = args.epochs * len(train_dataloader)
+           for epoch in range(args.epochs):
+                 train_loop(train_dataloader, model, optimizer, loss_fn, args.device, args.batch_size)
             
            output_model = fl.FLModel(
                  params=model.cpu().state_dict(),
@@ -118,6 +124,4 @@ def client():
 
            fl.send(output_model)
 
-
-if __name__ == "__client__":
-      client()
+client()

@@ -1,7 +1,0 @@
-{
-  "format_version": 2,
-  "client": {
-    "retry_timeout": 30,
-    "heart_beat_timeout": 600
-  }
-}

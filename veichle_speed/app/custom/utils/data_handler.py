@@ -23,7 +23,6 @@ def load_data(file_path):
         y = data['TTT'].values
         y =[row for row in y]
 
-        print(f"Data loaded with shape: {X.shape} ")
         return X, y
     
     except Exception as e:
