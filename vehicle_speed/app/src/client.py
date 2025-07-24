@@ -62,6 +62,8 @@ def client():
      
      args = parse()
 
+     print(args)
+
      data = load_data_from_url(args.data_url)
      print(f"recived: {data} from url: {args.data_url}")
 
@@ -109,7 +111,7 @@ def client():
            model.load_state_dict(recived_model.params)
            model.to(args.device)
            loss_fn = torch.nn.MSELoss()
-           optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+           optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
            steps = args.epochs * len(train_dataloader)
            for epoch in range(args.epochs):
@@ -122,3 +124,5 @@ def client():
            )
 
            fl.send(output_model)
+
+client()
