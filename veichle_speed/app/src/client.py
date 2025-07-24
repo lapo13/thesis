@@ -1,8 +1,8 @@
 import veichle_speed.app.custom.utils.data_handler as dh
-import os 
 
 from veichle_speed.app.custom.models.NeuralNet import RegressionNet as net
 from veichle_speed.app.custom.utils.parser import parse_arguments as parse
+from veichle_speed.app.custom.utils.server import load_data_from_url
 
 import torch
 from torch.utils.data import DataLoader
@@ -62,11 +62,10 @@ def client():
      
      args = parse()
 
-     print(f"[DEBUG] Current working dir: {os.getcwd()}")
-     print(f"[DEBUG] Data file path received: {args.data_file}")
-     print(f"[DEBUG] File exists? {os.path.exists(args.data_file)}")
+     data = load_data_from_url(args.data_url)
+     print(f"recived: {data} from url: {args.data_url}")
 
-     result = dh.load_data(args.data_file)
+     result = dh.load_data(data)
      
      if result is None:
            print("Failed to load data.")

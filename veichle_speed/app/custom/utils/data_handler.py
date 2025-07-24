@@ -2,7 +2,7 @@ import pandas as pd
 import ast
 #from sklearn.preprocessing import StandardScaler
 
-def load_data(file_path):
+def load_data(data):
     """
     Load data from a CSV file into a pandas DataFrame.
     
@@ -14,7 +14,7 @@ def load_data(file_path):
     """
     use_columns = ['mean', 'median', 'max', 'min', 'var', 'avg_variation', 'linear_trend']  # Adjust this if you want to specify columns to load
     try:
-        data = pd.read_csv(file_path)
+        data = pd.read_csv(data)
         #data = data[data['type_of_TTT'] == 'daily']
         data['TTT'] = data['TTT'].apply(ast.literal_eval)
         data = _list_filtering(data)
