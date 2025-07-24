@@ -1,8 +1,8 @@
-import veichle_speed.app.custom.utils.data_handler as dh
+import vehicle_speed.app.custom.utils.data_handler as dh
 
-from veichle_speed.app.custom.models.NeuralNet import RegressionNet as net
-from veichle_speed.app.custom.utils.parser import parse_arguments as parse
-from veichle_speed.app.custom.utils.server import load_data_from_url
+from vehicle_speed.app.custom.models.NeuralNet import RegressionNet as net
+from vehicle_speed.app.custom.utils.parser import parse_arguments as parse
+from vehicle_speed.app.custom.utils.server import load_data_from_url
 
 import torch
 from torch.utils.data import DataLoader
@@ -122,5 +122,3 @@ def client():
            )
 
            fl.send(output_model)
-
-client()
