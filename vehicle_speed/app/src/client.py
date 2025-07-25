@@ -11,57 +11,6 @@ from torch.utils.data import TensorDataset
 import nvflare.client as fl
 from nvflare.client.tracking import SummaryWriter
 
-
-
-def train_loop(dataloader, model, optimizer, loss_fn, device, batch_size, summary_writer = None):
-      size = len(dataloader.dataset)
-      #setting training mode for model
-      model.train()
-
-      for batch, data in enumerate(dataloader):
-            X, y = data[0].to(device), data[1].to(device)
-            pred = model(X)
-            print(pred.shape, y.shape)
-            loss = loss_fn(pred, y)
-
-
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-
-            if batch % 20 == 0:
-                  loss, current = loss.item(), batch*batch_size + len(X)
-                  print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-      print("Finished local training")
-
-def test_loop(dataloader, model, loss_fn, device, tolerance=5.0):
-    model.eval()
-    size = len(dataloader.dataset)
-    num_batches = len(dataloader)
-    total_loss = 0.0
-    total_correct = 0
-
-    with torch.no_grad():
-        for X, y in dataloader:
-            X, y = X.to(device), y.to(device)
-            pred = model(X)
-            total_loss += loss_fn(pred, y).item()
-
-            # Calcolo accuratezza con tolleranza
-            correct_matrix = (torch.abs(pred - y) <= tolerance).type(torch.float)
-            # Un campione è "corretto" se *tutti i 24 valori* lo sono
-            sample_correct = correct_matrix.all(dim=1)
-            total_correct += sample_correct.sum().item()
-
-    avg_loss = total_loss / num_batches
-    accuracy = total_correct / size
-    print(f"Test Error: \n Accuracy: {100*accuracy:>0.1f}%, Avg loss: {avg_loss:>8f} \n")
-    return 100 * accuracy, avg_loss
-
-
-
-
 def client():
      """
      Client function to load data and perform operations.
@@ -123,8 +72,8 @@ def client():
 
            steps = args.epochs * len(train_dataloader)
            for epoch in range(args.epochs):
-                 train_loop(train_dataloader, model, optimizer, loss_fn, args.device, args.batch_size)
-                 accuracy, avgloss = test_loop(test_dataloader, model, loss_fn, args.device)
+                 model.train_loop(train_dataloader, optimizer, loss_fn, args.device, args.batch_size)
+                 accuracy, avgloss = model.test_loop(test_dataloader, loss_fn, args.device)
             
            output_model = fl.FLModel(
                  params=model.cpu().state_dict(),
