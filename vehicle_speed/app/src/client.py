@@ -21,7 +21,9 @@ def train_loop(dataloader, model, optimizer, loss_fn, device, batch_size, summar
       for batch, data in enumerate(dataloader):
             X, y = data[0].to(device), data[1].to(device)
             pred = model(X)
+            print(pred.shape, y.shape)
             loss = loss_fn(pred, y)
+
 
             loss.backward()
             optimizer.step()
@@ -33,23 +35,31 @@ def train_loop(dataloader, model, optimizer, loss_fn, device, batch_size, summar
 
       print("Finished local training")
 
-def test_loop(dataloader, model, loss_fn):
-      #setting evaluation mode for model
-      model.eval()
-      size = len(dataloader.dataset)
-      num_batches = len(dataloader)
-      test_loss, correct = 0, 0
+def test_loop(dataloader, model, loss_fn, device, tolerance=5.0):
+    model.eval()
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    total_loss = 0.0
+    total_correct = 0
 
-      with torch.no_grad():
-            for X, y in dataloader:
-                  pred = model(X)
-                  test_loss += loss_fn(pred, y).item()
-                  correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-      
-      test_loss /= num_batches
-      correct /= size
-      print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-      return 100*correct, test_loss
+    with torch.no_grad():
+        for X, y in dataloader:
+            X, y = X.to(device), y.to(device)
+            pred = model(X)
+            total_loss += loss_fn(pred, y).item()
+
+            # Calcolo accuratezza con tolleranza
+            correct_matrix = (torch.abs(pred - y) <= tolerance).type(torch.float)
+            # Un campione è "corretto" se *tutti i 24 valori* lo sono
+            sample_correct = correct_matrix.all(dim=1)
+            total_correct += sample_correct.sum().item()
+
+    avg_loss = total_loss / num_batches
+    accuracy = total_correct / size
+    print(f"Test Error: \n Accuracy: {100*accuracy:>0.1f}%, Avg loss: {avg_loss:>8f} \n")
+    return 100 * accuracy, avg_loss
+
+
 
 
 def client():
@@ -65,36 +75,35 @@ def client():
      print(args)
 
      data = load_data_from_url(args.data_url)
-     print(f"recived: {data} from url: {args.data_url}")
+     #print(f"recived: {data} from url: {args.data_url}")
 
      result = dh.load_data(data)
-     
      if result is None:
            print("Failed to load data.")
            return
-     
-     X, y = result
      print("Data loaded successfully.")
-
-     # Convert to PyTorch tensors
-     X_tensor = torch.tensor(X, dtype=torch.float32)
      
-     y_tensor = torch.tensor(y, dtype=torch.float32)
+     #create different tensors for the 2 clients with low common values from the same dataset
+     X_train, X_test, y_train, y_test = dh.create_highly_differentiated_data(result, args.client_id)
      
-     print(f"Tensors, loaded succesfully: {X_tensor.shape}, {y_tensor.shape}")
+     print(f"Tensors, loaded succesfully: {X_train.shape}, {len(y_train[0])}, {X_test.shape}, {len(y_test[0])}")
 
      #taking input and output sizes
-     input_size = X_tensor.shape[1]
-     output_size = len(y[0])
+     input_size = X_train.shape[1]
+     output_size = len(y_train[0])
+
 
      #model initialization
      model = net(input_size, output_size)
 
      #flare initialize
      fl.init()
+
      #data loading 
-     train_dataset = TensorDataset(X_tensor, y_tensor)
+     train_dataset = TensorDataset(X_train, y_train)
      train_dataloader = DataLoader(train_dataset, args.batch_size, shuffle=True)
+     test_dataset = TensorDataset(X_test, y_test)
+     test_dataloader = DataLoader(test_dataset, args.batch_size, shuffle=True)
      
      #summary = SummaryWriter()
      while fl.is_running():
@@ -102,8 +111,7 @@ def client():
 
            #taking care of NULL model in the first iteration and logging number of rounds
            if recived_model == None:
-                 recived_model = model(input_size, output_size)
-                 print("Round di addestramento federato Iniziale")
+                 return
            if recived_model.current_round is not None:
                  print(f"Round di addestramento federato N: {recived_model.current_round}")
 
@@ -116,10 +124,11 @@ def client():
            steps = args.epochs * len(train_dataloader)
            for epoch in range(args.epochs):
                  train_loop(train_dataloader, model, optimizer, loss_fn, args.device, args.batch_size)
+                 accuracy, avgloss = test_loop(test_dataloader, model, loss_fn, args.device)
             
            output_model = fl.FLModel(
                  params=model.cpu().state_dict(),
-                 #metrics={"accuracy": accuracy},
+                 metrics={"accuracy": accuracy}, # type: ignore
                  meta={"NUM_STEPS_CURRENT_ROUND": steps}
            )
 

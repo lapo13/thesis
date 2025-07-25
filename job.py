@@ -13,13 +13,13 @@ from nvflare.job_config.script_runner import ScriptRunner
 # #model traing parameters, device set and datapath
 DATA_SERVER = "http://localhost:8000/METRO966_averageSpeed_desc.csv"
 DEVICE = "mps" if torch.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
-BATCH_SIZE = 4
+BATCH_SIZE = 16
 LEARNING_RATE = 1e-3
-EPOCHS = 5 
+EPOCHS = 10
 
 #job setup
-n_clients = 2
-n_rounds = 2
+n_clients = 5
+n_rounds = 7
 httpd = start_data_server(os.path.abspath("vehicle_speed/app/data"), port=8000)
 
 

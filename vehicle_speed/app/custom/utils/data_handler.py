@@ -1,6 +1,7 @@
 import pandas as pd
 import ast
-#from sklearn.preprocessing import StandardScaler
+import torch
+from torch.utils.data import random_split, TensorDataset
 
 def load_data(data):
     """
@@ -39,6 +40,64 @@ def _list_filtering(df):
     Returns:
     df[lunghezze == max_len]: Filtered Dataset based on TTT lenght
     """
+
     lunghezze = df['TTT'].apply(len)
     max_len = lunghezze.max()
     return df[lunghezze == max_len]
+
+
+def create_highly_differentiated_data(data, client_id, train_ratio=0.5):
+    """
+    Crea tesnori per l'addestramento dei due client
+    con sovrapposizione 20-30% tra client
+    """
+
+    # Assicura che X e y siano tensori PyTorch
+    X, y = data
+    X = torch.tensor(X, dtype=torch.float32)
+    y = torch.tensor(y, dtype=torch.float32)
+    
+    
+    print(f"Input shapes: X={X.shape}, y={y.shape}")
+    
+    # Seed per riproducibilità
+    base_seeds = [12345, 67890, 13579, 24680, 97531]
+    client_seed = base_seeds[client_id - 1] if client_id <= len(base_seeds) else client_id * 87654
+    
+    print(f"Client {client_id}: seed = {client_seed}")
+    
+    # Imposta il seed per PyTorch
+    torch.manual_seed(client_seed)
+    
+    # Crea dataset PyTorch
+    dataset = TensorDataset(X, y)
+    
+    # Calcola dimensioni
+    total_size = len(dataset)
+    train_size = int(total_size * train_ratio)
+    val_size = total_size - train_size
+    
+    # Split usando PyTorch (mantiene consistenza)
+    train_dataset, val_dataset = random_split(
+        dataset, 
+        [train_size, val_size],
+        generator=torch.Generator().manual_seed(client_seed)
+    )
+    
+    # Estrai tensori dai dataset
+    train_indices = train_dataset.indices
+    val_indices = val_dataset.indices
+    
+    X_train = X[train_indices]
+    y_train = y[train_indices]
+    X_val = X[val_indices]
+    y_val = y[val_indices]
+
+    '''
+    print(f"Client {client_id}: "
+          f"X_train={X_train.shape}, y_train={y_train.shape}, "
+          f"X_val={X_val.shape}, y_val={y_val.shape}")
+    '''
+    
+    
+    return X_train, X_val, y_train, y_val
