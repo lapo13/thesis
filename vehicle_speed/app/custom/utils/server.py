@@ -42,7 +42,7 @@ def start_data_server(data_dir, port=8000, timeout=60):
     return httpd
 
 
-def load_data_from_url(url):
+def import_data_from_url(url):
     response = requests.get(url)
     from io import StringIO
     return StringIO(response.text)

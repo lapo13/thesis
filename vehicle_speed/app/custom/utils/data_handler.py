@@ -1,9 +1,9 @@
 import pandas as pd
 import ast
 import torch
-from torch.utils.data import random_split, TensorDataset
+from torch.utils.data import random_split, TensorDataset, DataLoader
 
-def load_data(data):
+def load_data(data, id, batch_size):
     """
     Load data from a CSV file into a pandas DataFrame.
     
@@ -18,19 +18,24 @@ def load_data(data):
         data = pd.read_csv(data)
         #data = data[data['type_of_TTT'] == 'daily']
         data['TTT'] = data['TTT'].apply(ast.literal_eval)
-        data = _list_filtering(data)
-        
-        X = data[use_columns].values  # Filter to only include specified columns
-        y = data['TTT'].values
-        y =[row for row in y]
 
-        return X, y
+        filtered_data = _filtering(data, use_columns)
+
+        #create different tensors for the 2 clients with low common values from the same dataset
+        X_train, X_test, y_train, y_test = _create_highly_differentiated_data(filtered_data, id)
+        print(f"Tensors, loaded succesfully: {X_train.shape}, {len(y_train[0])}, {X_test.shape}, {len(y_test[0])}")
+
+        #data loading 
+        train_dataset = TensorDataset(X_train, y_train)
+        test_dataset = TensorDataset(X_test, y_test)
+        
+        return DataLoader(train_dataset, batch_size, shuffle=True), DataLoader(test_dataset, batch_size, shuffle=True)
     
     except Exception as e:
         print(f"Error loading data: {e}")
         return None
 
-def _list_filtering(df):
+def _filtering(df, columns):
     """
     Filter the TTT values taking only the 24 hours series
 
@@ -43,10 +48,15 @@ def _list_filtering(df):
 
     lunghezze = df['TTT'].apply(len)
     max_len = lunghezze.max()
-    return df[lunghezze == max_len]
+
+    df = df[lunghezze == max_len]
+    X = df[columns].values  # Filter to only include specified columns
+    y = df['TTT'].values
+    y =[row for row in y]
+    return X,y
 
 
-def create_highly_differentiated_data(data, client_id, train_ratio=0.5):
+def _create_highly_differentiated_data(data, client_id, train_ratio=0.5):
     """
     Crea tesnori per l'addestramento dei due client
     con sovrapposizione 20-30% tra client
