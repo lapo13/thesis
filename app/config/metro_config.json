@@ -1,0 +1,32 @@
+{
+    "data_path": "/Users/lapotinacci/thesis/data",
+    "file_pattern_var": "METRO_with_embeddings",
+    "columns": [
+        "min",
+        "var",
+        "median",
+        "interval_end", 
+        "mean",
+        "max",
+        "interval_start",
+        "linear_trend",
+        "is_weekend",
+        "EMBEDDING",
+        "month",
+        "avg_variation", 
+        "TTT",
+        "day"
+            ],
+    "categorical_vars": [
+        "is_weekend"
+    ],
+    "target_column": "TTT",
+    "output_dim": 24,
+    "test_size": 0.2,
+    "random_state": 42,
+    "series_filtering_params": {
+        "zero_ratio_thr": 0.75,
+        "var_thr": 5e-1,
+        "unique_thr": 3
+    }
+}
