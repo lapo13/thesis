@@ -1,8 +1,12 @@
-nvflare>=2.5.0
 tensorflow>=2.13.0
 pandas>=2.0.0
 numpy>=1.24.0
 scikit-learn>=1.3.0
-tensorboard
 openpyxl
+matplotlib
+ipynbkernel
+
+#per federated learning
+nvflare>=2.7.0
 torch
+tensorboard

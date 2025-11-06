@@ -11,7 +11,7 @@ from app.custom.utils.data_handler import DataHandler
 from app.custom.models.NeuralNet import TFModel as Net
 
 
-def load_config(config_path: str = "/Users/lapotinacci/thesis/vehicle_speed/app/config") -> dict:
+def load_config(config_path: str = "/Users/lapotinacci/thesis/Federated_Sys/app/config") -> dict:
     """
     Load configuration from JSON file based on site name.
     

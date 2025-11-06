@@ -37,6 +37,9 @@ if __name__ == "__main__":
     print()
     print("Result can be found in :", run.get_result())  # Percorso dove sono salvati i risultati
     print("Job Status is:", run.get_status())            # Status finale (SUCCESS, FAILED, ecc.)
+    print("Total Duration:", run.get_duration())     # Durata totale dell'esperimento
+    print("Total Rounds:", run.get_total_rounds())     # Numero totale di round completati
+    print("Metrics:", run.get_metrics())                # Metriche raccolte durante l'esperimento
+    print("Global Model:", run.get_global_model())  # Modello globale finale
     print()
-
 
