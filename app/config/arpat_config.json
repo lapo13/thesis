@@ -2,6 +2,7 @@
     "data_path": "/Users/lapotinacci/thesis/data",
     "file_pattern_var": "ARPAT_with_embeddings",
     "columns": [
+        "type_of_TTT",
         "min",
         "var",
         "median",
@@ -25,7 +26,7 @@
     "test_size": 0.2,
     "random_state": 42,
     "series_filtering_params": {
-        "zero_ratio_thr": 0.75,
+        "zero_ratio_thr": 0.85,
         "var_thr": 5e-1,
         "unique_thr": 3
     }

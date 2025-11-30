@@ -5,7 +5,6 @@ from tensorflow.keras import layers, optimizers # type: ignore
 from typing import List, Optional, Dict, Any
 from tensorflow.keras.callbacks import EarlyStopping # type: ignore
 
-#TODO: rifinire la classe per adattarla allo schema Federato
 class TFModel:
     """Wrapper addestramento/predizione con TensorFlow/Keras"""
 
@@ -16,42 +15,40 @@ class TFModel:
         """
 
         self.params = params or {
-            "architecture": [128, 64, 32],
+            "architecture": [64],
             "activation": "relu",
-            "dropout": 0.2,
+            "dropout": 0.0,
             "batch_size": 32,
-            "learning_rate": 1e-3,
+            "learning_rate": 53e-4,
             "optimizer": "adam",
-            "weight_decay": 0.0,
-            "epochs": 50,
-            "early_stop_patience": 10
+            "weight_decay": 5e-4,
+            "epochs": 600,
+            "early_stop_patience": 50
         }
         self.device = "/GPU:0" if tf.config.list_physical_devices('GPU') else "/CPU:0"
         self.model: keras.Model | None = None
         self.trained = False
         self.history = []
 
-    def build(self, input_dim: int, output_dim: int): 
+    def build(self, input_dim: int, output_dim: int = 1):
         """Costruzione dinamica della rete"""
-        hidden_units: List[int] = self.params.get("architecture", [128, 64, 32])
-        
-        if not hidden_units:
-            raise ValueError("Architecture must contain at least one hidden layer")
-        
+        hidden_units: List[int] = self.params.get("architecture", [])
         activation = self.params.get("activation", "relu").lower()
         if activation == "none":
             activation = None
-        dropout = float(self.params.get("dropout", 0.2))
+        dropout: List[float] = (self.params.get("dropout", [0.0]))
 
         inputs = keras.Input(shape=(input_dim,))
         x = inputs
+        if hidden_units == []:
+            raise ValueError("La lista dei neuroni è vuota! Controlla la configurazione.")
 
-        for units in hidden_units:
+        for i, units in enumerate(hidden_units):
             x = layers.Dense(units, activation=activation)(x)
-            if dropout > 0:
-                x = layers.Dropout(dropout)(x)
+            if i < len(dropout):
+                x = layers.Dropout(dropout[i])(x)
 
-        outputs = layers.Dense(output_dim)(x)
+        outputs = layers.Dense(output_dim, activation='linear')(x)
         self.model = keras.Model(inputs, outputs)
         
         if self.model:
@@ -70,12 +67,13 @@ class TFModel:
             return self.model.get_layer(layer_name)
         
     def train(self, 
-              X_train: np.ndarray, 
-              y_train: np.ndarray, 
-              epochs: int,
-              learning_rate: float,
-              batch_size: int,
-              val_split = 0.1) -> None:
+            X_train: np.ndarray, 
+            y_train: np.ndarray, 
+            batch_size: Optional[int] = None,
+            learning_rate: Optional[float] = None,
+            epochs: Optional[int] = None,
+            val_split = 0.1, 
+            early_stop: bool = True) -> None:
         """Train with optional parameter overrides."""
         assert self.model is not None, "Call build() first"
 
@@ -99,24 +97,43 @@ class TFModel:
             metrics=["mae", "mse"]
         )
 
-        with tf.device(self.device):
-            early_stop = EarlyStopping(
-                monitor="val_loss",
-                patience=self.params.get("early_stop_patience", 10),
-                restore_best_weights=True,
-                #verbose=1
-            )
+        if early_stop:
+            with tf.device(self.device):
+                early_stop = EarlyStopping(
+                    monitor="val_loss",
+                    patience=self.params.get("early_stop_patience", 10),
+                    restore_best_weights=True,
+                    #verbose=1
+                )
 
-            hist = self.model.fit(
-                X_train, y_train,
-                validation_split= val_split,
-                batch_size=batch_size,
-                epochs=epochs,
-                shuffle=True,
-                callbacks=[early_stop]
-            )
-            
-            self.history = hist.history
+                hist = self.model.fit(
+                    X_train, y_train,
+                    validation_split= val_split,
+                    batch_size=batch_size,
+                    epochs=epochs,
+                    shuffle=True,
+                    callbacks=[early_stop]
+                )
+                
+                self.history = hist.history
+        else:
+            with tf.device(self.device):
+                early_stop = EarlyStopping(
+                    monitor="val_loss",
+                    patience=epochs+1,
+                    restore_best_weights=True,
+                    #verbose=1
+                )
+
+                hist = self.model.fit(
+                    X_train, y_train,
+                    validation_split= val_split,
+                    callbacks=[early_stop],
+                    batch_size=batch_size,
+                    epochs=epochs
+                )
+                
+                self.history = hist.history
 
         self.trained = True
 

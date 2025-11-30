@@ -1,4 +1,16 @@
 /app/custom/utils/__pycache__
-/app/custom/models/__pycache__
+/app/custom/models
 __pycache__
 venv
+fl_results
+bob.ipynb
+Dataset_analysis.ipynb
+filtered_output.xlsx
+infoLocazSensori_con_embedding5dim.xlsx
+Sensors_Model(Old Stuff)
+Risultati
+train_test
+datasets
+Dataset_creators
+app/custom/utils/data_handler(inutile).py
+app/custom/models
